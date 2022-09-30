@@ -1,47 +1,39 @@
-from fastapi import FastAPI
-from flask_restful import reqparse, abort, Api, Resource
-import pickle
-import numpy as np
-from yaml import parse
-from model import NLPModel
+from transformers import pipeline
+from fastapi import FastAPI, Request
+import uvicorn
 
 app = FastAPI()
 
-model = NLPModel()
+nlp = pipeline(task='sentiment-analysis', 
+               model='nlptown/bert-base-multilingual-uncased-sentiment')
 
-model_path = 'lib/models/SentimentClassifier.pkl'
+@app.get('/')
+def get_root():
+    return {'message': 'This is a sentiment analysis API'}
+    
 
-with open(model_path, 'rb') as f:
-    model.clf = pickle.load(f)
+@app.get('/sentiment_analysis/')
+async def query_sentiment_analysis(text: str):
+    return analyze_sentiment(text)
 
-vec_path = 'lib/models/TFIDFVectorizer.pkl'
+def analyze_sentiment(text):
+    """model perdiction"""
+    
+    result = nlp(text)
 
-with open(vec_path, 'rb') as f:
-    model.vectorizer = pickle.load(f)
+    if result[0]['label'] == '1 star':
+        sent = 'very negative'
+    elif result[0]['label'] == '2 star':
+        sent = 'negative'
+    elif result[0]['label'] == '3 star':
+        sent = 'neutral'
+    elif result[0]['label'] == '4 start':
+        sent = 'positive'
+    else:
+        sent = 'very positive'
+    prob = result[0]['score']
 
-parser = reqparse.RequestParser()
-parser.add_argument('query')
-
-class PredictSentiment(Resource):
-    @app.get('/')
-    async def get(self):
-        args = parser.parse_args()
-        user_query = args['query']
-
-        uq_vectorize = model.vectorizer_transform(np.array([user_query]))
-        prediction = model.predict(uq_vectorize)
-        pred_proba = model.predict_proba(uq_vectorize)
-
-        if prediction == 0:
-            pred_text = 'negative'
-        else:
-            pred_text = 'positive'
-
-        confidence = round(pred_proba[0], 3)
-
-        output = {'prediction': pred_text, 'confidence': confidence}
-
-        return output
-
+    return {'sentiment': sent, 'probability': prob}
+    
 if __name__=='__main__':
-    app.run(debug=True)
+    uvicorn.run(app)
