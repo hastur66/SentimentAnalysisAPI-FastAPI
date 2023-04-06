@@ -1,7 +1,9 @@
 import pytest
+import app
 
 text = 'All good'
 sent = 'very positive'
 
 def test_analyze_sentiment(text=text):
-    assert sent == 'very positive'
+    output = app.analyze_sentiment(text)
+    assert output['sentiment'] == 'very positive'
