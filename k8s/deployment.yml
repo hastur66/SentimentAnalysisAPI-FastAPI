@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentimentapi
+spec:
+  selector:
+    matchLabels:
+      app: sentimentapi
+  template:
+    metadata:
+      labels:
+        app: sentimentapi
+    spec:
+      containers:
+      - name: sentimentapi
+        image: chamathkb/sentimentapi:latest
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 8000
